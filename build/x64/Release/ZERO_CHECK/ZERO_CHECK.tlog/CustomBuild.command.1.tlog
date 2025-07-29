@@ -1,0 +1,10 @@
+^C:\TRAINING\KAMATECH\KUNGFUCHESS-NEW\KUNGFUCHESS\BUILD\CMAKEFILES\30310C35A286CBE4A58AC1AA7B72C5DF\GENERATE.STAMP.RULE
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -SC:/training/kamatech/KungFuChess-New/KungFuChess -BC:/training/kamatech/KungFuChess-New/KungFuChess/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file C:/training/kamatech/KungFuChess-New/KungFuChess/build/KungFuChess.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

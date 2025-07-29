@@ -1,0 +1,4 @@
+C:/training/kamatech/KungFuChess-New/KungFuChess/build/CMakeFiles/kungfu_chess_lib.dir
+C:/training/kamatech/KungFuChess-New/KungFuChess/build/CMakeFiles/KungFuChess.dir
+C:/training/kamatech/KungFuChess-New/KungFuChess/build/CMakeFiles/ALL_BUILD.dir
+C:/training/kamatech/KungFuChess-New/KungFuChess/build/CMakeFiles/ZERO_CHECK.dir
