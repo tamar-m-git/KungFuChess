@@ -8,6 +8,14 @@
 Game::Game(std::vector<PiecePtr> pcs, Board board)
     : pieces(pcs), board(board) {
     validate();
+    
+    // Initialize event system
+    audioManager_ = std::make_shared<AudioManager>();
+    eventPublisher_.subscribe("piece_moved", audioManager_);
+    eventPublisher_.subscribe("piece_captured", audioManager_);
+    eventPublisher_.subscribe("game_started", audioManager_);
+    eventPublisher_.subscribe("game_ended", audioManager_);
+    
     for(const auto & p : pieces) {
         if (p) {
             piece_by_id[p->id] = p;
@@ -28,6 +36,9 @@ Board Game::clone_board() const {
 }
 
 void Game::run(int num_iterations, bool is_with_graphics) {
+    // Publish game start event
+    eventPublisher_.publish(GameEvent("game_started"));
+    
     running_ = true;
     start_user_input_thread();
     int start_ms = game_time_ms();
@@ -38,10 +49,16 @@ void Game::run(int num_iterations, bool is_with_graphics) {
 
     announce_win();
     
-    // Close OpenCV windows if graphics were used
+    // Wait for user to see the victory message and hear the sound
     if(is_with_graphics) {
+        std::cout << "Press any key to exit..." << std::endl;
+        cv::waitKey(0); // Wait for any key press
         OpenCvImg::close_all_windows();
+    } else {
+        std::cout << "Press Enter to exit..." << std::endl;
+        std::cin.get();
     }
+    
     running_ = false;
 }
 
@@ -192,6 +209,11 @@ void Game::run_game_loop(int num_iterations, bool is_with_graphics) {
         }
 
         resolve_collisions();
+        
+        // Check win condition after resolving collisions
+        if (is_win()) {
+            break; // Exit game loop immediately when win condition is met
+        }
 
         ++it_counter;
         // Run indefinitely unless ESC is pressed or win condition is met
@@ -252,6 +274,13 @@ void Game::process_input(const Command& cmd) {
                             // Update position map again before passing to piece
                             update_cell2piece_map();
                             piece->on_command(move_cmd, pos);
+                            
+                            // Publish move event
+                            std::unordered_map<std::string, std::string> eventData;
+                            eventData["piece_id"] = selected_piece_->id;
+                            eventData["from"] = std::to_string(selected_piece_pos_.first) + "," + std::to_string(selected_piece_pos_.second);
+                            eventData["to"] = std::to_string(cursor_pos_.first) + "," + std::to_string(cursor_pos_.second);
+                            eventPublisher_.publish(GameEvent("piece_moved", eventData));
                         }
                     }
                 } catch (const std::exception& e) {
@@ -332,7 +361,39 @@ void Game::resolve_collisions() {
 }
 
 void Game::announce_win() const {
-    // Game end
+    // Find remaining kings to determine winner
+    std::vector<PiecePtr> remaining_kings;
+    for (const auto& piece : pieces) {
+        if (piece->id.at(0) == 'K') {
+            remaining_kings.push_back(piece);
+        }
+    }
+    
+    if (remaining_kings.size() == 1) {
+        char winner_color = remaining_kings[0]->id[1];
+        std::string winner_name = (winner_color == 'W') ? "WHITE" : "BLACK";
+        
+        std::cout << "\n" << std::string(50, '=') << std::endl;
+        std::cout << "🏆 GAME OVER! 🏆" << std::endl;
+        std::cout << "🎉 " << winner_name << " WINS! 🎉" << std::endl;
+        std::cout << "Remaining King: " << remaining_kings[0]->id << std::endl;
+        std::cout << std::string(50, '=') << "\n" << std::endl;
+        
+        // Publish game end event
+        std::unordered_map<std::string, std::string> eventData;
+        eventData["winner"] = winner_name;
+        eventData["winner_color"] = std::string(1, winner_color);
+        const_cast<Game*>(this)->eventPublisher_.publish(GameEvent("game_ended", eventData));
+    } else if (remaining_kings.size() == 0) {
+        std::cout << "\n" << std::string(50, '=') << std::endl;
+        std::cout << "💥 DRAW! Both kings were captured! 💥" << std::endl;
+        std::cout << std::string(50, '=') << "\n" << std::endl;
+        
+        // Publish draw event
+        std::unordered_map<std::string, std::string> eventData;
+        eventData["result"] = "DRAW";
+        const_cast<Game*>(this)->eventPublisher_.publish(GameEvent("game_ended", eventData));
+    }
 }
 
 void Game::validate() {
@@ -473,12 +534,36 @@ void Game::capture_piece(PiecePtr captured, PiecePtr captor) {
               << " captured by " << (captor ? captor->id : "NULL") << std::endl;
     
     if (captured && captor) {
+        // Remove the captured piece first
         pieces.erase(std::remove(pieces.begin(), pieces.end(), captured), pieces.end());
         piece_by_id.erase(captured->id);
-        // Update position map after capture
         update_cell2piece_map();
+         // אחרי update_cell2piece_map() – בודקים אם נשארו פחות משני מלכים
+    if (is_win()) {
+        // בונים נתוני אירוע סיום
+        std::unordered_map<std::string, std::string> endData;
+        if (!pieces.empty()) {
+            char winner_color = pieces[0]->id[1];
+            endData["winner"] = (winner_color == 'W' ? "WHITE" : "BLACK");
+            endData["winner_color"] = std::string(1, winner_color);
+        } else {
+            endData["result"] = "DRAW";
+        }
+        // שולחים אירוע סיום ומשמיעים את הצליל המתאים
+        eventPublisher_.publish(GameEvent("game_ended", endData));
+        announce_win();
+        running_ = false;
+        return;  // מחזירים כדי לא לפרסם את אירוע ה‑capture הרגיל
     }
-}
+
+            // Normal capture - play capture sound
+            std::unordered_map<std::string, std::string> eventData;
+            eventData["captured"] = captured->id;
+            eventData["captor"] = captor->id;
+            eventPublisher_.publish(GameEvent("piece_captured", eventData));
+        }
+    }
+
 
 std::string Game::get_position_key(int x, int y) {
     return std::to_string(x) + "," + std::to_string(y);
@@ -596,6 +681,11 @@ bool Game::needs_promotion(PiecePtr piece) {
     // Check if it's a pawn
     if (piece->id[0] != 'P') return false;
     
+    // Only check for promotion if pawn just finished moving
+    if (piece->state->name != "long_rest" && piece->state->name != "short_rest") {
+        return false;
+    }
+    
     auto current_pos = piece->current_cell();
     char color = piece->id[1];
     
@@ -631,10 +721,13 @@ PiecePtr Game::create_promoted_piece(const std::string& piece_type, const std::p
 Game create_game(const std::string& pieces_root, ImgFactoryPtr img_factory) {
     // Load board image
     std::string board_img_path = pieces_root + "board.png";
+    std::cout << "🖼️ Trying to load board image: " << board_img_path << std::endl;
     auto board_img = img_factory->load(board_img_path, {640, 640});
     if (!board_img) {
+        std::cout << "❌ Failed to load board image: " << board_img_path << std::endl;
         throw std::runtime_error("Failed to load board image: " + board_img_path);
     }
+    std::cout << "✅ Board image loaded successfully" << std::endl;
     
     // Create board (8x8 chess board)
     Board board(80, 80, 8, 8, board_img);

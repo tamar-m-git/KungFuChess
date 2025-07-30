@@ -26,6 +26,9 @@
 #include <mutex>
 #include <condition_variable>
 #include <atomic>
+// Event system
+#include "EventSystem.hpp"
+#include "AudioManager.hpp"
 
 #if __has_include(<filesystem>)
 #include <filesystem>
@@ -94,6 +97,10 @@ private:
     // Pawn promotion state
     PiecePtr promoting_pawn_ = nullptr;
     bool is_promoting_ = false;
+
+    // Event system
+    EventPublisher eventPublisher_;
+    std::shared_ptr<AudioManager> audioManager_;
 
     std::chrono::steady_clock::time_point start_tp;
     

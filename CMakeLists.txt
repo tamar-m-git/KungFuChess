@@ -32,31 +32,42 @@ set(OPENCV_DIR "${CMAKE_CURRENT_SOURCE_DIR}/OpenCV_451")
 set(OPENCV_INCLUDE_DIR "${OPENCV_DIR}/include")
 set(OPENCV_LIB_DIR "${OPENCV_DIR}/bin")
 
+# Set SFML paths
+set(SFML_DIR "C:/SFML-2.6.2")
+set(SFML_INCLUDE_DIR "${SFML_DIR}/include")
+set(SFML_LIB_DIR "${SFML_DIR}/lib")
+set(SFML_BIN_DIR "${SFML_DIR}/bin")
+
 # Include directories
 target_include_directories(kungfu_chess_lib PRIVATE
     ${OPENCV_INCLUDE_DIR}
+    ${SFML_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/img
     ${CMAKE_CURRENT_SOURCE_DIR}/src/json)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${OPENCV_INCLUDE_DIR}
+    ${SFML_INCLUDE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/img
     ${CMAKE_CURRENT_SOURCE_DIR}/src/json)
 
-target_link_directories(kungfu_chess_lib PRIVATE ${OPENCV_LIB_DIR})
-target_link_directories(${PROJECT_NAME} PRIVATE ${OPENCV_LIB_DIR})
+target_link_directories(kungfu_chess_lib PRIVATE ${OPENCV_LIB_DIR} ${SFML_LIB_DIR})
+target_link_directories(${PROJECT_NAME} PRIVATE ${OPENCV_LIB_DIR} ${SFML_LIB_DIR})
 
-# Link OpenCV libraries
+# Link OpenCV and SFML libraries
 target_link_libraries(kungfu_chess_lib 
     $<$<CONFIG:Debug>:${OPENCV_LIB_DIR}/opencv_world451d.lib>
     $<$<CONFIG:Release>:${OPENCV_LIB_DIR}/opencv_world451.lib>
     $<$<CONFIG:RelWithDebInfo>:${OPENCV_LIB_DIR}/opencv_world451.lib>
     $<$<CONFIG:MinSizeRel>:${OPENCV_LIB_DIR}/opencv_world451.lib>
+    # SFML libraries (simplified)
+    "${SFML_LIB_DIR}/sfml-audio.lib"
+    "${SFML_LIB_DIR}/sfml-system.lib"
 )
 
-# Copy OpenCV DLLs to output directory
+# Copy OpenCV and SFML DLLs to output directory
 if(WIN32)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -65,6 +76,29 @@ if(WIN32)
         $<$<CONFIG:RelWithDebInfo>:${OPENCV_LIB_DIR}/opencv_world451.dll>
         $<$<CONFIG:MinSizeRel>:${OPENCV_LIB_DIR}/opencv_world451.dll>
         $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+    
+    # Copy SFML DLLs (fixed paths)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${SFML_BIN_DIR}/sfml-audio-2.dll"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+    
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${SFML_BIN_DIR}/sfml-system-2.dll"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+    
+    # Copy OpenAL DLL (required for SFML audio)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${SFML_BIN_DIR}/openal32.dll"
+        $<TARGET_FILE_DIR:${PROJECT_NAME}>)
+    
+    # Copy sounds directory
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/sounds"
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/sounds")
 endif()
 
 # Add option to build unit tests

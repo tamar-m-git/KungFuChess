@@ -86,7 +86,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -106,10 +106,10 @@
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_DEBUG;_WINDOWS;CMAKE_INTDIR=\"Debug\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -117,9 +117,45 @@
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <PostBuildEvent>
-      <Message></Message>
+      <Message>				</Message>
       <Command>setlocal
 "C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/opencv_world451d.dll    C:/training/kamatech/KungFuChess-New/KungFuChess/build/Debug
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/sfml-audio-2.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/Debug
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/sfml-system-2.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/Debug
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/openal32.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/Debug
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory C:/training/kamatech/KungFuChess-New/KungFuChess/sounds C:/training/kamatech/KungFuChess-New/KungFuChess/build/Debug/sounds
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -129,8 +165,8 @@ exit /b %1
 if %errorlevel% neq 0 goto :VCEnd</Command>
     </PostBuildEvent>
     <Link>
-      <AdditionalDependencies>Debug\kungfu_chess_lib.lib;C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\bin\opencv_world451d.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin;C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Debug\kungfu_chess_lib.lib;C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\bin\opencv_world451d.lib;C:\SFML-2.6.2\lib\sfml-audio.lib;C:\SFML-2.6.2\lib\sfml-system.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin;C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/$(Configuration);C:/SFML-2.6.2/lib;C:/SFML-2.6.2/lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -144,7 +180,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -165,10 +201,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"Release\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -176,9 +212,45 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <PostBuildEvent>
-      <Message></Message>
+      <Message>				</Message>
       <Command>setlocal
 "C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different  C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/opencv_world451.dll   C:/training/kamatech/KungFuChess-New/KungFuChess/build/Release
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/sfml-audio-2.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/Release
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/sfml-system-2.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/Release
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/openal32.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/Release
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory C:/training/kamatech/KungFuChess-New/KungFuChess/sounds C:/training/kamatech/KungFuChess-New/KungFuChess/build/Release/sounds
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -188,8 +260,8 @@ exit /b %1
 if %errorlevel% neq 0 goto :VCEnd</Command>
     </PostBuildEvent>
     <Link>
-      <AdditionalDependencies>Release\kungfu_chess_lib.lib;C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\bin\opencv_world451.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin;C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Release\kungfu_chess_lib.lib;C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\bin\opencv_world451.lib;C:\SFML-2.6.2\lib\sfml-audio.lib;C:\SFML-2.6.2\lib\sfml-system.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin;C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/$(Configuration);C:/SFML-2.6.2/lib;C:/SFML-2.6.2/lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -203,7 +275,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='MinSizeRel|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <ExceptionHandling>Sync</ExceptionHandling>
@@ -224,10 +296,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"MinSizeRel\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -235,9 +307,45 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <PostBuildEvent>
-      <Message></Message>
+      <Message>				</Message>
       <Command>setlocal
 "C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different    C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/opencv_world451.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/MinSizeRel
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/sfml-audio-2.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/MinSizeRel
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/sfml-system-2.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/MinSizeRel
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/openal32.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/MinSizeRel
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory C:/training/kamatech/KungFuChess-New/KungFuChess/sounds C:/training/kamatech/KungFuChess-New/KungFuChess/build/MinSizeRel/sounds
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -247,8 +355,8 @@ exit /b %1
 if %errorlevel% neq 0 goto :VCEnd</Command>
     </PostBuildEvent>
     <Link>
-      <AdditionalDependencies>MinSizeRel\kungfu_chess_lib.lib;C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\bin\opencv_world451.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin;C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>MinSizeRel\kungfu_chess_lib.lib;C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\bin\opencv_world451.lib;C:\SFML-2.6.2\lib\sfml-audio.lib;C:\SFML-2.6.2\lib\sfml-system.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin;C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/$(Configuration);C:/SFML-2.6.2/lib;C:/SFML-2.6.2/lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -262,7 +370,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='RelWithDebInfo|x64'">
     <ClCompile>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AssemblerListingLocation>$(IntDir)</AssemblerListingLocation>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -282,10 +390,10 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     </ClCompile>
     <ResourceCompile>
       <PreprocessorDefinitions>%(PreprocessorDefinitions);WIN32;_WINDOWS;NDEBUG;CMAKE_INTDIR=\"RelWithDebInfo\"</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Midl>
-      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\include;C:\SFML-2.6.2\include;C:\training\kamatech\KungFuChess-New\KungFuChess\src;C:\training\kamatech\KungFuChess-New\KungFuChess\src\img;C:\training\kamatech\KungFuChess-New\KungFuChess\src\json;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <OutputDirectory>$(ProjectDir)/$(IntDir)</OutputDirectory>
       <HeaderFileName>%(Filename).h</HeaderFileName>
       <TypeLibraryName>%(Filename).tlb</TypeLibraryName>
@@ -293,9 +401,45 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
       <ProxyFileName>%(Filename)_p.c</ProxyFileName>
     </Midl>
     <PostBuildEvent>
-      <Message></Message>
+      <Message>				</Message>
       <Command>setlocal
 "C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different   C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/opencv_world451.dll  C:/training/kamatech/KungFuChess-New/KungFuChess/build/RelWithDebInfo
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/sfml-audio-2.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/RelWithDebInfo
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/sfml-system-2.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/RelWithDebInfo
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_if_different C:/SFML-2.6.2/bin/openal32.dll C:/training/kamatech/KungFuChess-New/KungFuChess/build/RelWithDebInfo
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
+setlocal
+"C:\Program Files\CMake\bin\cmake.exe" -E copy_directory C:/training/kamatech/KungFuChess-New/KungFuChess/sounds C:/training/kamatech/KungFuChess-New/KungFuChess/build/RelWithDebInfo/sounds
 if %errorlevel% neq 0 goto :cmEnd
 :cmEnd
 endlocal &amp; call :cmErrorLevel %errorlevel% &amp; goto :cmDone
@@ -305,8 +449,8 @@ exit /b %1
 if %errorlevel% neq 0 goto :VCEnd</Command>
     </PostBuildEvent>
     <Link>
-      <AdditionalDependencies>RelWithDebInfo\kungfu_chess_lib.lib;C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\bin\opencv_world451.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
-      <AdditionalLibraryDirectories>C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin;C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>RelWithDebInfo\kungfu_chess_lib.lib;C:\training\kamatech\KungFuChess-New\KungFuChess\OpenCV_451\bin\opencv_world451.lib;C:\SFML-2.6.2\lib\sfml-audio.lib;C:\SFML-2.6.2\lib\sfml-system.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;comdlg32.lib;advapi32.lib</AdditionalDependencies>
+      <AdditionalLibraryDirectories>C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin;C:/training/kamatech/KungFuChess-New/KungFuChess/OpenCV_451/bin/$(Configuration);C:/SFML-2.6.2/lib;C:/SFML-2.6.2/lib/$(Configuration);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>%(AdditionalOptions) /machine:x64</AdditionalOptions>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreSpecificDefaultLibraries>%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
