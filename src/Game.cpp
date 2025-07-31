@@ -36,6 +36,10 @@ Board Game::clone_board() const {
 }
 
 void Game::run(int num_iterations, bool is_with_graphics) {
+    // Initialize display text
+    display_text_ = "GAME START";
+    text_change_time_ = std::chrono::steady_clock::now();
+    
     // Publish game start event
     eventPublisher_.publish(GameEvent("game_started"));
     
@@ -67,7 +71,10 @@ void Game::start_user_input_thread() {
 }
 
 void Game::run_game_loop(int num_iterations, bool is_with_graphics) {
+    current_state_ = GameState::STARTING;
+    state_start_time_ = std::chrono::steady_clock::now();
     int it_counter = 0;
+    
     // Initialize all pieces first
     int now = game_time_ms();
     for(size_t i = 0; i < pieces.size(); ++i) {
@@ -79,7 +86,51 @@ void Game::run_game_loop(int num_iterations, bool is_with_graphics) {
         }
     }
     
-    while(!is_win() && running_) {
+    while(running_) {
+        if (current_state_ == GameState::STARTING) {
+            if (is_with_graphics) {
+                // Don't use draw_game_start_screen - let the main display handle it
+                // Just wait for the timer in update_display_text to switch to PLAYING
+                std::cout << "[DEBUG] In STARTING state, waiting for timer..." << std::endl;
+            } else {
+                current_state_ = GameState::PLAYING; // Skip start screen in non-graphics mode
+            }
+            // Don't continue here - let the main loop handle the display
+        }
+        
+        if (current_state_ == GameState::GAME_OVER) {
+            if (is_with_graphics) {
+                draw_game_over_screen(winner_text_);
+                int key = cv::waitKeyEx(30);
+                if (key == 27) { // ESC to exit
+                    break;
+                }
+            } else {
+                break; // Exit immediately in non-graphics mode
+            }
+            continue;
+        }
+        
+        // Regular game loop (PLAYING state)
+        if (is_win() && winner_text_.empty()) {
+            std::cout << "*** GAME OVER DETECTED! ***" << std::endl;
+            // DON'T change current_state_ - keep it as PLAYING to maintain board display
+            // Determine winner
+            for (const auto& piece : pieces) {
+                if (piece->id[0] == 'K') {
+                    winner_text_ = (piece->id[1] == 'W') ? "WHITE" : "BLACK";
+                    std::cout << "*** WINNER SET TO: " << winner_text_ << " ***" << std::endl;
+                    break;
+                }
+            }
+            
+            // Set "GAME ENDED" display text first
+            display_text_ = "GAME ENDED";
+            text_change_time_ = std::chrono::steady_clock::now();
+            show_winner_first_ = true; // This will be used to switch to winner later
+            
+            std::cout << "*** GAME OVER - BUT STAYING IN PLAYING STATE ***" << std::endl;
+        }
         now = game_time_ms();
         
         // Update all pieces
@@ -179,11 +230,104 @@ void Game::run_game_loop(int num_iterations, bool is_with_graphics) {
                     // Note: OpenCV text drawing would go here in a real implementation
                 }
                 
-                display_board.show();
+              // Load background image
+auto img_factory = std::make_shared<OpenCvImgFactory>();
+int background_width = 1920;
+int background_height = 1080;
+auto background_img = img_factory->load("pieces/background2.jpg", {background_width, background_height});
+
+if (background_img) {
+    // Calculate perfect center position
+    int board_size = 640;
+    int offset_x = (background_width - board_size) / 2 - 200;  // Move left
+    int offset_y = (background_height - board_size) / 2 - 100; // Move up
+    
+    // Debug output
+    static bool debug_printed = false;
+    if (!debug_printed) {
+        std::cout << "Background: " << background_width << "x" << background_height << std::endl;
+        std::cout << "Board size: " << board_size << "x" << board_size << std::endl;
+        std::cout << "Offset: (" << offset_x << ", " << offset_y << ")" << std::endl;
+        debug_printed = true;
+    }
+    
+    display_board.img->draw_on(*background_img, offset_x, offset_y);
+    
+    // Check if game is over and draw winner text on top
+    std::cout << "[DEBUG] Checking game over condition:" << std::endl;
+    std::cout << "[DEBUG] current_state_ = " << (int)current_state_ << " (0=STARTING, 1=PLAYING, 2=GAME_OVER)" << std::endl;
+    std::cout << "[DEBUG] winner_text_ = '" << winner_text_ << "'" << std::endl;
+    std::cout << "[DEBUG] winner_text_.empty() = " << (winner_text_.empty() ? "true" : "false") << std::endl;
+    
+    // Update display text based on events and timing
+    update_display_text();
+    
+    // Draw dynamic text - positioned above board
+    int text_x = offset_x + 30;   // Move slightly more to the left (440 + 30 = 470)
+    int text_y = offset_y - 30;   // Move down more (220 - 30 = 190)
+    
+    if (!display_text_.empty()) {
+        background_img->put_text(display_text_, text_x, text_y, 3.0);
+    }
+    
+    if (current_state_ == GameState::GAME_OVER && !winner_text_.empty()) {
+        std::cout << "\n=== CONSOLE: GAME OVER! ===" << std::endl;
+        std::cout << "=== CONSOLE: " << winner_text_ << " WINS! ===" << std::endl;
+        std::cout << "=== CONSOLE: NOW DRAWING ON SCREEN ===" << std::endl;
+        
+        // Position text directly above the board
+        // Board is at offset_x=440, offset_y=220, size=640
+        int text_x = offset_x;  // Same x as board (440)
+        int text_y = offset_y - 80;  // 80 pixels above board (140)
+        int text_width = board_size;  // Same width as board (640)
+        int text_height = 70;
+        
+        std::cout << "[DEBUG] Drawing text at board position: x=" << text_x << ", y=" << text_y << std::endl;
+        
+        // Draw WHITE background rectangle directly above board
+        background_img->draw_rect(text_x, text_y, text_width, text_height, {255, 255, 255}); // WHITE background
+        background_img->draw_rect(text_x+2, text_y+2, text_width-4, text_height-4, {0, 0, 0}); // Black border
+        background_img->draw_rect(text_x+4, text_y+4, text_width-8, text_height-8, {255, 255, 255}); // WHITE inner
+        
+        // Draw winner text with BLACK color on WHITE background
+        std::string win_text = winner_text_ + " WINS!";
+        std::cout << "[DEBUG] Drawing BLACK text: '" << win_text << "' at position (" << (text_x + 50) << ", " << (text_y + 50) << ")" << std::endl;
+        
+        // Use multiple text calls to make it VERY visible
+        for (int dx = -2; dx <= 2; dx++) {
+            for (int dy = -2; dy <= 2; dy++) {
+                background_img->put_text(win_text, text_x + 50 + dx, text_y + 50 + dy, 5.0);
+            }
+        }
+        
+        std::cout << "=== CONSOLE: SCREEN DRAWING COMPLETE ===" << std::endl;
+        std::cout << "=== CONSOLE: BLACK TEXT ON WHITE BACKGROUND SHOULD BE VISIBLE ===\n" << std::endl;
+    } else {
+        if (current_state_ == GameState::GAME_OVER) {
+            std::cout << "[DEBUG] Game over state but winner_text_ is empty!" << std::endl;
+        } else if (!winner_text_.empty()) {
+            std::cout << "[DEBUG] Winner text exists but not in game over state!" << std::endl;
+        }
+    }
+    
+    // Show the background with the board on it
+    background_img->show();
+} else {
+    // Fallback to original display if background fails to load
+    display_board.show();
+}
+
                 
                 // Handle input in main loop where window exists
                 int key = cv::waitKeyEx(30);
                 if (key != -1) {
+                    // If game is over and winner is displayed, only accept ESC or any key to exit
+                    if (!winner_text_.empty() && !show_winner_first_) {
+                        // Game over - winner is displayed, wait for any key to exit
+                        std::cout << "Game over! Press any key to exit..." << std::endl;
+                        return; // Exit the game
+                    }
+                    
                     Command cmd(game_time_ms(), "", "", {});
                     
                     // Arrow keys controls (final: swap 8 and 2)
@@ -209,11 +353,6 @@ void Game::run_game_loop(int num_iterations, bool is_with_graphics) {
         }
 
         resolve_collisions();
-        
-        // Check win condition after resolving collisions
-        if (is_win()) {
-            break; // Exit game loop immediately when win condition is met
-        }
 
         ++it_counter;
         // Run indefinitely unless ESC is pressed or win condition is met
@@ -552,7 +691,7 @@ void Game::capture_piece(PiecePtr captured, PiecePtr captor) {
         // שולחים אירוע סיום ומשמיעים את הצליל המתאים
         eventPublisher_.publish(GameEvent("game_ended", endData));
         announce_win();
-        running_ = false;
+        // DON'T set running_ = false here - let the main loop handle game over state
         return;  // מחזירים כדי לא לפרסם את אירוע ה‑capture הרגיל
     }
 
@@ -716,6 +855,76 @@ PiecePtr Game::create_promoted_piece(const std::string& piece_type, const std::p
     
     std::string piece_dir_name = piece_type + color;
     return piece_factory.create_piece(piece_dir_name, position);
+}
+
+void Game::draw_game_start_screen() {
+    auto img_factory = std::make_shared<OpenCvImgFactory>();
+    int background_width = 1920;
+    int background_height = 1080;
+    auto background_img = img_factory->load("pieces/background2.jpg", {background_width, background_height});
+    
+    if (background_img) {
+        // Draw large "KUNG FU CHESS" title at top center - move more to left
+        background_img->put_text("KUNG FU CHESS", 300, 200, 4.0);
+        
+        // Draw "Press any key to start" below - move more to left
+        background_img->put_text("Press any key to start", 400, 300, 2.0);
+        
+        background_img->show();
+    }
+}
+
+void Game::draw_game_over_screen(const std::string& winner) {
+    auto img_factory = std::make_shared<OpenCvImgFactory>();
+    int background_width = 1920;
+    int background_height = 1080;
+    auto background_img = img_factory->load("pieces/background2.jpg", {background_width, background_height});
+    
+    if (background_img) {
+        // Draw medal rectangle as trophy
+        background_img->draw_rect(860, 120, 200, 120, {0, 215, 255}); // Gold rectangle
+        background_img->put_text("TROPHY", 900, 200, 1.5);
+        
+        // Draw winner text
+        std::string win_text;
+        if (winner == "WHITE") {
+            win_text = "WHITE WINS!";
+        } else {
+            win_text = "BLACK WINS!";
+        }
+        
+        background_img->put_text(win_text, 650, 350, 5.0);
+        
+        // Draw "Press ESC to exit" below
+        background_img->put_text("Press ESC to exit", 750, 450, 2.0);
+        
+        background_img->show();
+    }
+}
+
+void Game::update_display_text() {
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - text_change_time_).count();
+    
+    std::cout << "[DEBUG] update_display_text: state=" << (int)current_state_ << ", elapsed=" << elapsed << ", display_text_='" << display_text_ << "'" << std::endl;
+    
+    if (current_state_ == GameState::STARTING) {
+        if (elapsed >= 3) {
+            // After 3 seconds, clear the "GAME START" text and move to PLAYING
+            display_text_ = "";
+            current_state_ = GameState::PLAYING;
+            std::cout << "[DEBUG] Switched to PLAYING state" << std::endl;
+        }
+    } else if (!winner_text_.empty()) {
+        // Game is over but we're still in PLAYING state to keep board visible
+        if (show_winner_first_ && elapsed >= 3) {
+            // After showing "GAME ENDED" for 3 seconds, show winner
+            display_text_ = winner_text_ + " WINS!";
+            show_winner_first_ = false;
+            text_change_time_ = now; // Reset timer for next phase
+            std::cout << "[DEBUG] Switched to winner display: " << display_text_ << std::endl;
+        }
+    }
 }
 
 Game create_game(const std::string& pieces_root, ImgFactoryPtr img_factory) {

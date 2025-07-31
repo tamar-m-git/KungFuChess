@@ -45,6 +45,12 @@ public:
     explicit InvalidBoard(const std::string& msg) : std::runtime_error(msg) {}
 };
 
+enum class GameState {
+    STARTING,    // מציג מסך התחלה
+    PLAYING,     // משחק רגיל
+    GAME_OVER    // מציג מסך סיום
+};
+
 class Game {
 public:
     Game(std::vector<PiecePtr> pcs, Board board);
@@ -124,6 +130,20 @@ private:
     bool needs_promotion(PiecePtr piece);
     void handle_pawn_promotion(PiecePtr pawn);
     PiecePtr create_promoted_piece(const std::string& piece_type, const std::pair<int,int>& position, char color);
+    
+    // Game state and screen display functions
+    GameState current_state_ = GameState::STARTING;
+    std::string winner_text_ = "";
+    std::chrono::steady_clock::time_point state_start_time_;
+    
+    // Display text management
+    std::string display_text_ = "";
+    std::chrono::steady_clock::time_point text_change_time_;
+    bool show_winner_first_ = false;
+    
+    void draw_game_start_screen();
+    void draw_game_over_screen(const std::string& winner);
+    void update_display_text();
 };
 
 // Factory function to create game from pieces directory
