@@ -1,32 +1,33 @@
 #include "AudioManager.hpp"
+#include <SFML/Audio.hpp>
+#include <iostream>
 
 AudioManager::AudioManager() {
-    std::cout << "🎵 AudioManager initializing with SFML..." << std::endl;
+    std::cout << "🎵 AudioManager initializing with SFML sound support..." << std::endl;
     
-    // Load sound files
-    if (!moveBuffer_.loadFromFile("sounds/move.mp3")) {
-        std::cout << "⚠️ Could not load sounds/move.mp3" << std::endl;
-    } else {
-        std::cout << "✅ Loaded move sound" << std::endl;
+    // Load sound buffers
+    if (!moveBuffer.loadFromFile("sounds/move.mp3")) {
+        std::cout << "❌ Failed to load move.mp3" << std::endl;
+    }
+    if (!captureBuffer.loadFromFile("sounds/capture.mp3")) {
+        std::cout << "❌ Failed to load capture.mp3" << std::endl;
+    }
+    if (!startBuffer.loadFromFile("sounds/start.mp3")) {
+        std::cout << "❌ Failed to load start.mp3" << std::endl;
+    }
+    if (!gameOverBuffer.loadFromFile("sounds/gameOver.mp3")) {
+        std::cout << "❌ Failed to load gameOver.mp3" << std::endl;
+    }
+    if (!changeBuffer.loadFromFile("sounds/change.mp3")) {
+        std::cout << "❌ Failed to load change.mp3" << std::endl;
     }
     
-    if (!captureBuffer_.loadFromFile("sounds/capture.mp3")) {
-        std::cout << "⚠️ Could not load sounds/capture.mp3" << std::endl;
-    } else {
-        std::cout << "✅ Loaded capture sound" << std::endl;
-    }
-    
-    if (!gameStartBuffer_.loadFromFile("sounds/start.mp3")) {
-        std::cout << "⚠️ Could not load sounds/start.mp3" << std::endl;
-    } else {
-        std::cout << "✅ Loaded game start sound" << std::endl;
-    }
-    
-    if (!gameOverBuffer_.loadFromFile("sounds/gameOver.mp3")) {
-        std::cout << "⚠️ Could not load sounds/gameOver.mp3" << std::endl;
-    } else {
-        std::cout << "✅ Loaded game over sound" << std::endl;
-    }
+    // Set buffers to sounds
+    moveSound.setBuffer(moveBuffer);
+    captureSound.setBuffer(captureBuffer);
+    startSound.setBuffer(startBuffer);
+    gameOverSound.setBuffer(gameOverBuffer);
+    changeSound.setBuffer(changeBuffer);
     
     std::cout << "🎵 AudioManager ready!" << std::endl;
 }
@@ -40,27 +41,32 @@ void AudioManager::onEvent(const GameEvent& event) {
         playGameStartSound();
     } else if (event.type == "game_ended") {
         playGameEndSound();
+    } else if (event.type == "pawn_promotion") {
+        playChangeSound();
     }
 }
 
 void AudioManager::playMoveSound() {
-    playSound(moveBuffer_, "Piece moved");
+    std::cout << "🎵 Playing: Piece moved" << std::endl;
+    moveSound.play();
 }
 
 void AudioManager::playCaptureSound() {
-    playSound(captureBuffer_, "Piece captured");
+    std::cout << "🎵 Playing: Piece captured" << std::endl;
+    captureSound.play();
 }
 
 void AudioManager::playGameStartSound() {
-    playSound(gameStartBuffer_, "Game started");
+    std::cout << "🎵 Playing: Game started" << std::endl;
+    startSound.play();
 }
 
 void AudioManager::playGameEndSound() {
-    playSound(gameOverBuffer_, "Game ended");
+    std::cout << "🎵 Playing: Game ended" << std::endl;
+    gameOverSound.play();
 }
 
-void AudioManager::playSound(const sf::SoundBuffer& buffer, const std::string& description) {
-    std::cout << "🎵 Playing: " << description << std::endl;
-    sound_.setBuffer(buffer);
-    sound_.play();
+void AudioManager::playChangeSound() {
+    std::cout << "🎵 Playing: Pawn promotion" << std::endl;
+    changeSound.play();
 }

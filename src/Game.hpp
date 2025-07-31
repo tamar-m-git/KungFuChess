@@ -29,6 +29,7 @@
 // Event system
 #include "EventSystem.hpp"
 #include "AudioManager.hpp"
+#include "TextManager.hpp"
 
 #if __has_include(<filesystem>)
 #include <filesystem>
@@ -49,6 +50,11 @@ enum class GameState {
     STARTING,    // מציג מסך התחלה
     PLAYING,     // משחק רגיל
     GAME_OVER    // מציג מסך סיום
+};
+
+enum class CurrentPlayer {
+    WHITE,
+    BLACK
 };
 
 class Game {
@@ -93,12 +99,24 @@ private:
     std::mutex positions_mutex_;
     std::mutex input_mutex_;
     
-    // Selected piece for user interaction
+    // Dual cursor system for two players
+    CurrentPlayer current_player_ = CurrentPlayer::WHITE;
+    
+    // White player cursor and selection
+    std::pair<int, int> white_cursor_pos_ = {7, 7};
+    PiecePtr white_selected_piece_ = nullptr;
+    std::pair<int, int> white_selected_pos_ = {-1, -1};
+    
+    // Black player cursor and selection  
+    std::pair<int, int> black_cursor_pos_ = {0, 0};
+    PiecePtr black_selected_piece_ = nullptr;
+    std::pair<int, int> black_selected_pos_ = {-1, -1};
+    
+    // Legacy compatibility (will be removed)
     PiecePtr selected_piece_ = nullptr;
     std::pair<int, int> cursor_pos_ = {0, 0};
     std::pair<int, int> selected_piece_pos_ = {-1, -1};
     bool is_selecting_target_ = false;
-    int current_player_ = 1;  // Current active player
     
     // Pawn promotion state
     PiecePtr promoting_pawn_ = nullptr;
@@ -107,6 +125,7 @@ private:
     // Event system
     EventPublisher eventPublisher_;
     std::shared_ptr<AudioManager> audioManager_;
+    std::shared_ptr<TextManager> textManager_;
 
     std::chrono::steady_clock::time_point start_tp;
     
@@ -115,8 +134,14 @@ private:
     void handle_key_press(int key);
     void select_piece_at(int x, int y);
     void move_cursor(int dx, int dy);
+    void move_white_cursor(int dx, int dy);
+    void move_black_cursor(int dx, int dy);
+    bool can_select_piece(PiecePtr piece, CurrentPlayer player);
+    void draw_dual_cursors(Board& display_board);
     void confirm_move();
     void cancel_selection();
+    void handle_player_select(std::pair<int, int>& cursor_pos, PiecePtr& selected_piece, std::pair<int, int>& selected_pos);
+    void handle_player_jump(PiecePtr& selected_piece, std::pair<int, int>& selected_pos);
     std::string cell_to_chess_notation(int x, int y);
     PiecePtr find_piece_by_id(const std::string& id);
     void check_captures();

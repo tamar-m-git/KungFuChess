@@ -11,10 +11,19 @@ Game::Game(std::vector<PiecePtr> pcs, Board board)
     
     // Initialize event system
     audioManager_ = std::make_shared<AudioManager>();
+    textManager_ = std::make_shared<TextManager>();
+    
+    // Subscribe AudioManager to events
     eventPublisher_.subscribe("piece_moved", audioManager_);
     eventPublisher_.subscribe("piece_captured", audioManager_);
     eventPublisher_.subscribe("game_started", audioManager_);
     eventPublisher_.subscribe("game_ended", audioManager_);
+    eventPublisher_.subscribe("pawn_promotion", audioManager_);
+    eventPublisher_.subscribe("pawn_promoted", audioManager_);
+    // Subscribe TextManager to events
+    eventPublisher_.subscribe("game_started", textManager_);
+    eventPublisher_.subscribe("game_playing", textManager_);
+    eventPublisher_.subscribe("game_ended", textManager_);
     
     for(const auto & p : pieces) {
         if (p) {
@@ -36,8 +45,24 @@ Board Game::clone_board() const {
 }
 
 void Game::run(int num_iterations, bool is_with_graphics) {
-    // Initialize display text
-    display_text_ = "GAME START";
+    // Print dual cursor controls information
+    std::cout << "\n" << std::string(60, '=') << std::endl;
+    std::cout << "🎮 DUAL CURSOR CONTROLS 🎮" << std::endl;
+    std::cout << std::string(60, '=') << std::endl;
+    std::cout << "WHITE PLAYER (Green & Blue cursor):" << std::endl;
+    std::cout << "  Arrow Keys: Move cursor" << std::endl;
+    std::cout << "  Enter: Select/Move piece" << std::endl;
+    std::cout << "  Space: Jump action" << std::endl;
+    std::cout << "\nBLACK PLAYER (Red & Yellow cursor):" << std::endl;
+    std::cout << "  WASD: Move cursor" << std::endl;
+    std::cout << "  F: Select/Move piece" << std::endl;
+    std::cout << "  G: Jump action" << std::endl;
+    std::cout << "\nGeneral:" << std::endl;
+    std::cout << "  ESC: Exit game" << std::endl;
+    std::cout << "  Q/R/B/N: Pawn promotion" << std::endl;
+    std::cout << std::string(60, '=') << "\n" << std::endl;
+    
+    // Initialize timing
     text_change_time_ = std::chrono::steady_clock::now();
     
     // Publish game start event
@@ -89,13 +114,18 @@ void Game::run_game_loop(int num_iterations, bool is_with_graphics) {
     while(running_) {
         if (current_state_ == GameState::STARTING) {
             if (is_with_graphics) {
-                // Don't use draw_game_start_screen - let the main display handle it
-                // Just wait for the timer in update_display_text to switch to PLAYING
-                std::cout << "[DEBUG] In STARTING state, waiting for timer..." << std::endl;
+                // Check if 3 seconds have passed to switch to PLAYING
+                auto now_time = std::chrono::steady_clock::now();
+                auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now_time - state_start_time_).count();
+                if (elapsed >= 3) {
+                    current_state_ = GameState::PLAYING;
+                    eventPublisher_.publish(GameEvent("game_playing"));
+                    std::cout << "[DEBUG] Switched to PLAYING state via Publisher" << std::endl;
+                }
             } else {
-                current_state_ = GameState::PLAYING; // Skip start screen in non-graphics mode
+                current_state_ = GameState::PLAYING;
+                eventPublisher_.publish(GameEvent("game_playing"));
             }
-            // Don't continue here - let the main loop handle the display
         }
         
         if (current_state_ == GameState::GAME_OVER) {
@@ -124,12 +154,28 @@ void Game::run_game_loop(int num_iterations, bool is_with_graphics) {
                 }
             }
             
-            // Set "GAME ENDED" display text first
-            display_text_ = "GAME ENDED";
+            // Publish "GAME ENDED" event first
+            eventPublisher_.publish(GameEvent("game_ended"));
+            
+            // Set timer for winner display
             text_change_time_ = std::chrono::steady_clock::now();
-            show_winner_first_ = true; // This will be used to switch to winner later
+            show_winner_first_ = true;
             
             std::cout << "*** GAME OVER - BUT STAYING IN PLAYING STATE ***" << std::endl;
+        }
+        
+        // Check if it's time to show winner after "GAME ENDED"
+        if (!winner_text_.empty() && show_winner_first_) {
+            auto now_time = std::chrono::steady_clock::now();
+            auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now_time - text_change_time_).count();
+            if (elapsed >= 3) {
+                // Publish winner event
+                std::unordered_map<std::string, std::string> eventData;
+                eventData["winner"] = winner_text_;
+                eventPublisher_.publish(GameEvent("game_ended", eventData));
+                show_winner_first_ = false;
+                std::cout << "*** PUBLISHED WINNER EVENT: " << winner_text_ << " ***" << std::endl;
+            }
         }
         now = game_time_ms();
         
@@ -208,19 +254,27 @@ void Game::run_game_loop(int num_iterations, bool is_with_graphics) {
             }
             
             if (pieces_drawn > 0) {
-                // Draw green border around current cursor position
-                auto cursor_pos_m = display_board.cell_to_m(cursor_pos_);
-                auto cursor_pos_pix = display_board.m_to_pix(cursor_pos_m);
+                // Draw both cursors
                 int cell_size = 80;
-                display_board.img->draw_rect(cursor_pos_pix.first, cursor_pos_pix.second, 
-                                           cell_size, cell_size, {0, 255, 0}); // Green border
                 
-                // Draw blue border around selected piece
+                // Draw white player cursor (green)
+                auto white_pos_m = display_board.cell_to_m(white_cursor_pos_);
+                auto white_pos_pix = display_board.m_to_pix(white_pos_m);
+                display_board.img->draw_rect(white_pos_pix.first, white_pos_pix.second, 
+                                           cell_size, cell_size, {0, 255, 0}); // Green cursor
+                
+                // Draw black player cursor (red)
+                auto black_pos_m = display_board.cell_to_m(black_cursor_pos_);
+                auto black_pos_pix = display_board.m_to_pix(black_pos_m);
+                display_board.img->draw_rect(black_pos_pix.first, black_pos_pix.second, 
+                                           cell_size, cell_size, {0, 0, 255}); // Red cursor
+                
+                // Draw selected piece border
                 if (selected_piece_) {
                     auto selected_pos_m = display_board.cell_to_m(selected_piece_pos_);
                     auto selected_pos_pix = display_board.m_to_pix(selected_pos_m);
                     display_board.img->draw_rect(selected_pos_pix.first, selected_pos_pix.second, 
-                                               cell_size, cell_size, {255, 0, 0}); // Blue border
+                                               cell_size, cell_size, {255, 0, 0}); // Blue border for selection
                 }
                 
                 // Show promotion message if in promotion mode
@@ -259,56 +313,16 @@ if (background_img) {
     std::cout << "[DEBUG] winner_text_ = '" << winner_text_ << "'" << std::endl;
     std::cout << "[DEBUG] winner_text_.empty() = " << (winner_text_.empty() ? "true" : "false") << std::endl;
     
-    // Update display text based on events and timing
-    update_display_text();
-    
-    // Draw dynamic text - positioned above board
+    // Draw dynamic text from TextManager - positioned above board
     int text_x = offset_x + 30;   // Move slightly more to the left (440 + 30 = 470)
     int text_y = offset_y - 30;   // Move down more (220 - 30 = 190)
     
-    if (!display_text_.empty()) {
-        background_img->put_text(display_text_, text_x, text_y, 3.0);
+    std::string current_text = textManager_->getCurrentText();
+    if (!current_text.empty()) {
+        background_img->put_text(current_text, text_x, text_y, 3.0);
     }
     
-    if (current_state_ == GameState::GAME_OVER && !winner_text_.empty()) {
-        std::cout << "\n=== CONSOLE: GAME OVER! ===" << std::endl;
-        std::cout << "=== CONSOLE: " << winner_text_ << " WINS! ===" << std::endl;
-        std::cout << "=== CONSOLE: NOW DRAWING ON SCREEN ===" << std::endl;
-        
-        // Position text directly above the board
-        // Board is at offset_x=440, offset_y=220, size=640
-        int text_x = offset_x;  // Same x as board (440)
-        int text_y = offset_y - 80;  // 80 pixels above board (140)
-        int text_width = board_size;  // Same width as board (640)
-        int text_height = 70;
-        
-        std::cout << "[DEBUG] Drawing text at board position: x=" << text_x << ", y=" << text_y << std::endl;
-        
-        // Draw WHITE background rectangle directly above board
-        background_img->draw_rect(text_x, text_y, text_width, text_height, {255, 255, 255}); // WHITE background
-        background_img->draw_rect(text_x+2, text_y+2, text_width-4, text_height-4, {0, 0, 0}); // Black border
-        background_img->draw_rect(text_x+4, text_y+4, text_width-8, text_height-8, {255, 255, 255}); // WHITE inner
-        
-        // Draw winner text with BLACK color on WHITE background
-        std::string win_text = winner_text_ + " WINS!";
-        std::cout << "[DEBUG] Drawing BLACK text: '" << win_text << "' at position (" << (text_x + 50) << ", " << (text_y + 50) << ")" << std::endl;
-        
-        // Use multiple text calls to make it VERY visible
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dy = -2; dy <= 2; dy++) {
-                background_img->put_text(win_text, text_x + 50 + dx, text_y + 50 + dy, 5.0);
-            }
-        }
-        
-        std::cout << "=== CONSOLE: SCREEN DRAWING COMPLETE ===" << std::endl;
-        std::cout << "=== CONSOLE: BLACK TEXT ON WHITE BACKGROUND SHOULD BE VISIBLE ===\n" << std::endl;
-    } else {
-        if (current_state_ == GameState::GAME_OVER) {
-            std::cout << "[DEBUG] Game over state but winner_text_ is empty!" << std::endl;
-        } else if (!winner_text_.empty()) {
-            std::cout << "[DEBUG] Winner text exists but not in game over state!" << std::endl;
-        }
-    }
+    // Removed duplicate winner display - using only display_text_ for dynamic text
     
     // Show the background with the board on it
     background_img->show();
@@ -330,13 +344,20 @@ if (background_img) {
                     
                     Command cmd(game_time_ms(), "", "", {});
                     
-                    // Arrow keys controls (final: swap 8 and 2)
-                    if (key == 2424832) cmd = Command(game_time_ms(), "", "up", {});    // 4 -> Up
-                    else if (key == 2555904) cmd = Command(game_time_ms(), "", "down", {});  // 6 -> Down  
-                    else if (key == 2490368) cmd = Command(game_time_ms(), "", "left", {});  // 8 -> Left
-                    else if (key == 2621440) cmd = Command(game_time_ms(), "", "right", {}); // 2 -> Right
-                    else if (key == 13) cmd = Command(game_time_ms(), "", "select", {});  // Enter
-                    else if (key == 32) cmd = Command(game_time_ms(), "", "jump_action", {});  // Space
+                    // White player controls (Arrow keys)
+                    if (key == 2424832) cmd = Command(game_time_ms(), "", "white_up", {});    // Up Arrow
+                    else if (key == 2555904) cmd = Command(game_time_ms(), "", "white_down", {});  // Down Arrow
+                    else if (key == 2490368) cmd = Command(game_time_ms(), "", "white_left", {});  // Left Arrow
+                    else if (key == 2621440) cmd = Command(game_time_ms(), "", "white_right", {}); // Right Arrow
+                    else if (key == 13) cmd = Command(game_time_ms(), "", "white_select", {});  // Enter
+                    else if (key == 32) cmd = Command(game_time_ms(), "", "white_jump", {});  // Space
+                    // Black player controls (WASD)
+                    else if (key == 'w' || key == 'W') cmd = Command(game_time_ms(), "", "black_up", {});
+                    else if (key == 's' || key == 'S') cmd = Command(game_time_ms(), "", "black_down", {});
+                    else if (key == 'a' || key == 'A') cmd = Command(game_time_ms(), "", "black_left", {});
+                    else if (key == 'd' || key == 'D') cmd = Command(game_time_ms(), "", "black_right", {});
+                    else if (key == 'f' || key == 'F') cmd = Command(game_time_ms(), "", "black_select", {});  // F key
+                    else if (key == 'g' || key == 'G') cmd = Command(game_time_ms(), "", "black_jump", {});  // G key
                     else if (key == 'q' || key == 'Q') cmd = Command(game_time_ms(), "", "promote_queen", {});
                     else if (key == 'r' || key == 'R') cmd = Command(game_time_ms(), "", "promote_rook", {});
                     else if (key == 'b' || key == 'B') cmd = Command(game_time_ms(), "", "promote_bishop", {});
@@ -379,7 +400,174 @@ void Game::update_cell2piece_map() {
 void Game::process_input(const Command& cmd) {
     std::lock_guard<std::mutex> lock(input_mutex_);
     
-    if (cmd.type == "up") move_cursor(0, -1);
+    // White player controls (Arrow keys) - update main cursor
+    if (cmd.type == "white_up") {
+        move_white_cursor(0, -1);
+        cursor_pos_ = white_cursor_pos_; // Sync with main cursor
+    }
+    else if (cmd.type == "white_down") {
+        move_white_cursor(0, 1);
+        cursor_pos_ = white_cursor_pos_;
+    }
+    else if (cmd.type == "white_left") {
+        move_white_cursor(-1, 0);
+        cursor_pos_ = white_cursor_pos_;
+    }
+    else if (cmd.type == "white_right") {
+        move_white_cursor(1, 0);
+        cursor_pos_ = white_cursor_pos_;
+    }
+    else if (cmd.type == "white_select") {
+        cursor_pos_ = white_cursor_pos_;
+        // Use original selection logic
+        update_cell2piece_map();
+        if (selected_piece_ == nullptr) {
+            auto cell_pieces_it = pos.find(cursor_pos_);
+            if (cell_pieces_it != pos.end() && !cell_pieces_it->second.empty()) {
+                auto piece = cell_pieces_it->second[0];
+                // Allow selection but show message about color
+                selected_piece_ = piece;
+                selected_piece_pos_ = cursor_pos_;
+                if (piece->id.length() >= 2 && piece->id[1] == 'W') {
+                    std::cout << "White player selected: " << piece->id << std::endl;
+                } else if (piece->id.length() >= 2) {
+                    std::cout << "White player selected black piece: " << piece->id << " (not recommended)" << std::endl;
+                }
+            }
+        } else if (cursor_pos_ == selected_piece_pos_) {
+            selected_piece_ = nullptr;
+            selected_piece_pos_ = {-1, -1};
+        } else {
+            // Check if white player can move this piece
+            bool can_move = true;
+            if (selected_piece_->id.length() >= 2 && selected_piece_->id[1] != 'W') {
+                std::cout << "White player cannot move black piece: " << selected_piece_->id << std::endl;
+                can_move = false;
+            }
+            
+            if (can_move && is_move_valid(selected_piece_, selected_piece_pos_, cursor_pos_)) {
+                try {
+                    Command move_cmd(cmd.timestamp, selected_piece_->id, "move", {selected_piece_pos_, cursor_pos_});
+                    auto piece_it = piece_by_id.find(move_cmd.piece_id);
+                    if (piece_it != piece_by_id.end()) {
+                        auto piece = piece_it->second;
+                        if (piece && piece->state) {
+                            update_cell2piece_map();
+                            piece->on_command(move_cmd, pos);
+                            std::unordered_map<std::string, std::string> eventData;
+                            eventData["piece_id"] = selected_piece_->id;
+                            eventData["from"] = std::to_string(selected_piece_pos_.first) + "," + std::to_string(selected_piece_pos_.second);
+                            eventData["to"] = std::to_string(cursor_pos_.first) + "," + std::to_string(cursor_pos_.second);
+                            eventPublisher_.publish(GameEvent("piece_moved", eventData));
+                        }
+                    }
+                } catch (const std::exception& e) {}
+            }
+            selected_piece_ = nullptr;
+            selected_piece_pos_ = {-1, -1};
+        }
+    }
+    else if (cmd.type == "white_jump") {
+        cursor_pos_ = white_cursor_pos_;
+        if (selected_piece_ != nullptr) {
+            Command jump_cmd(cmd.timestamp, selected_piece_->id, "jump", {selected_piece_pos_});
+            auto piece_it = piece_by_id.find(jump_cmd.piece_id);
+            if (piece_it != piece_by_id.end()) {
+                auto piece = piece_it->second;
+                if (piece && piece->state) {
+                    update_cell2piece_map();
+                    piece->on_command(jump_cmd, pos);
+                }
+            }
+            selected_piece_ = nullptr;
+            selected_piece_pos_ = {-1, -1};
+        }
+    }
+    // Black player controls (WASD) - update main cursor
+    else if (cmd.type == "black_up") {
+        move_black_cursor(0, -1);
+        cursor_pos_ = black_cursor_pos_;
+    }
+    else if (cmd.type == "black_down") {
+        move_black_cursor(0, 1);
+        cursor_pos_ = black_cursor_pos_;
+    }
+    else if (cmd.type == "black_left") {
+        move_black_cursor(-1, 0);
+        cursor_pos_ = black_cursor_pos_;
+    }
+    else if (cmd.type == "black_right") {
+        move_black_cursor(1, 0);
+        cursor_pos_ = black_cursor_pos_;
+    }
+    else if (cmd.type == "black_select") {
+        cursor_pos_ = black_cursor_pos_;
+        // Use original selection logic
+        update_cell2piece_map();
+        if (selected_piece_ == nullptr) {
+            auto cell_pieces_it = pos.find(cursor_pos_);
+            if (cell_pieces_it != pos.end() && !cell_pieces_it->second.empty()) {
+                auto piece = cell_pieces_it->second[0];
+                // Allow selection but show message about color
+                selected_piece_ = piece;
+                selected_piece_pos_ = cursor_pos_;
+                if (piece->id.length() >= 2 && piece->id[1] == 'B') {
+                    std::cout << "Black player selected: " << piece->id << std::endl;
+                } else if (piece->id.length() >= 2) {
+                    std::cout << "Black player selected white piece: " << piece->id << " (not recommended)" << std::endl;
+                }
+            }
+        } else if (cursor_pos_ == selected_piece_pos_) {
+            selected_piece_ = nullptr;
+            selected_piece_pos_ = {-1, -1};
+        } else {
+            // Check if black player can move this piece
+            bool can_move = true;
+            if (selected_piece_->id.length() >= 2 && selected_piece_->id[1] != 'B') {
+                std::cout << "Black player cannot move white piece: " << selected_piece_->id << std::endl;
+                can_move = false;
+            }
+            
+            if (can_move && is_move_valid(selected_piece_, selected_piece_pos_, cursor_pos_)) {
+                try {
+                    Command move_cmd(cmd.timestamp, selected_piece_->id, "move", {selected_piece_pos_, cursor_pos_});
+                    auto piece_it = piece_by_id.find(move_cmd.piece_id);
+                    if (piece_it != piece_by_id.end()) {
+                        auto piece = piece_it->second;
+                        if (piece && piece->state) {
+                            update_cell2piece_map();
+                            piece->on_command(move_cmd, pos);
+                            std::unordered_map<std::string, std::string> eventData;
+                            eventData["piece_id"] = selected_piece_->id;
+                            eventData["from"] = std::to_string(selected_piece_pos_.first) + "," + std::to_string(selected_piece_pos_.second);
+                            eventData["to"] = std::to_string(cursor_pos_.first) + "," + std::to_string(cursor_pos_.second);
+                            eventPublisher_.publish(GameEvent("piece_moved", eventData));
+                        }
+                    }
+                } catch (const std::exception& e) {}
+            }
+            selected_piece_ = nullptr;
+            selected_piece_pos_ = {-1, -1};
+        }
+    }
+    else if (cmd.type == "black_jump") {
+        cursor_pos_ = black_cursor_pos_;
+        if (selected_piece_ != nullptr) {
+            Command jump_cmd(cmd.timestamp, selected_piece_->id, "jump", {selected_piece_pos_});
+            auto piece_it = piece_by_id.find(jump_cmd.piece_id);
+            if (piece_it != piece_by_id.end()) {
+                auto piece = piece_it->second;
+                if (piece && piece->state) {
+                    update_cell2piece_map();
+                    piece->on_command(jump_cmd, pos);
+                }
+            }
+            selected_piece_ = nullptr;
+            selected_piece_pos_ = {-1, -1};
+        }
+    }
+    // Legacy support for old controls
+    else if (cmd.type == "up") move_cursor(0, -1);
     else if (cmd.type == "down") move_cursor(0, 1);
     else if (cmd.type == "left") move_cursor(-1, 0);
     else if (cmd.type == "right") move_cursor(1, 0);
@@ -389,7 +577,7 @@ void Game::process_input(const Command& cmd) {
         
         // Enhanced selection logic from movement-logic branch
         if (selected_piece_ == nullptr) {
-            // First press - pick up piece under cursor
+            // First press - pick up piece under cursor (any color for legacy support)
             auto cell_pieces_it = pos.find(cursor_pos_);
             if (cell_pieces_it != pos.end() && !cell_pieces_it->second.empty()) {
                 selected_piece_ = cell_pieces_it->second[0];
@@ -493,6 +681,55 @@ void Game::process_input(const Command& cmd) {
 void Game::move_cursor(int dx, int dy) {
     cursor_pos_.first = std::max(0, std::min(board.W_cells - 1, cursor_pos_.first + dx));
     cursor_pos_.second = std::max(0, std::min(board.H_cells - 1, cursor_pos_.second + dy));
+}
+
+void Game::move_white_cursor(int dx, int dy) {
+    white_cursor_pos_.first = std::max(0, std::min(board.W_cells - 1, white_cursor_pos_.first + dx));
+    white_cursor_pos_.second = std::max(0, std::min(board.H_cells - 1, white_cursor_pos_.second + dy));
+}
+
+void Game::move_black_cursor(int dx, int dy) {
+    black_cursor_pos_.first = std::max(0, std::min(board.W_cells - 1, black_cursor_pos_.first + dx));
+    black_cursor_pos_.second = std::max(0, std::min(board.H_cells - 1, black_cursor_pos_.second + dy));
+}
+
+bool Game::can_select_piece(PiecePtr piece, CurrentPlayer player) {
+    if (!piece || piece->id.length() < 2) return false;
+    
+    char piece_color = piece->id[1]; // W or B
+    return (player == CurrentPlayer::WHITE && piece_color == 'W') ||
+           (player == CurrentPlayer::BLACK && piece_color == 'B');
+}
+
+void Game::draw_dual_cursors(Board& display_board) {
+    int cell_size = 80;
+    
+    // Draw white player cursor - green border (like original)
+    auto white_pos_m = display_board.cell_to_m(white_cursor_pos_);
+    auto white_pos_pix = display_board.m_to_pix(white_pos_m);
+    display_board.img->draw_rect(white_pos_pix.first, white_pos_pix.second, 
+                               cell_size, cell_size, {0, 255, 0}); // Green cursor
+    
+    // Draw black player cursor - red border
+    auto black_pos_m = display_board.cell_to_m(black_cursor_pos_);
+    auto black_pos_pix = display_board.m_to_pix(black_pos_m);
+    display_board.img->draw_rect(black_pos_pix.first, black_pos_pix.second, 
+                               cell_size, cell_size, {0, 0, 255}); // Red cursor
+    
+    // Draw selected piece borders
+    if (white_selected_piece_) {
+        auto selected_pos_m = display_board.cell_to_m(white_selected_pos_);
+        auto selected_pos_pix = display_board.m_to_pix(selected_pos_m);
+        display_board.img->draw_rect(selected_pos_pix.first, selected_pos_pix.second, 
+                                   cell_size, cell_size, {255, 0, 0}); // Blue for white selection
+    }
+    
+    if (black_selected_piece_) {
+        auto selected_pos_m = display_board.cell_to_m(black_selected_pos_);
+        auto selected_pos_pix = display_board.m_to_pix(selected_pos_m);
+        display_board.img->draw_rect(selected_pos_pix.first, selected_pos_pix.second, 
+                                   cell_size, cell_size, {0, 255, 255}); // Yellow for black selection
+    }
 }
 
 void Game::resolve_collisions() {
@@ -690,7 +927,7 @@ void Game::capture_piece(PiecePtr captured, PiecePtr captor) {
         }
         // שולחים אירוע סיום ומשמיעים את הצליל המתאים
         eventPublisher_.publish(GameEvent("game_ended", endData));
-        announce_win();
+        // DON'T call announce_win() here - it will be called later in run()
         // DON'T set running_ = false here - let the main loop handle game over state
         return;  // מחזירים כדי לא לפרסם את אירוע ה‑capture הרגיל
     }
@@ -840,8 +1077,15 @@ bool Game::needs_promotion(PiecePtr piece) {
 void Game::handle_pawn_promotion(PiecePtr pawn) {
     promoting_pawn_ = pawn;
     is_promoting_ = true;
+    
+    // Publish pawn promotion event
+    std::unordered_map<std::string, std::string> eventData;
+    eventData["pawn_id"] = pawn->id;
+    eventPublisher_.publish(GameEvent("pawn_promotion", eventData));
+    
     std::cout << "Pawn promotion! Press Q/R/B/N to choose piece type" << std::endl;
 }
+
 
 PiecePtr Game::create_promoted_piece(const std::string& piece_type, const std::pair<int,int>& position, char color) {
     // Create new piece ID: piece_type + color + position
@@ -902,28 +1146,79 @@ void Game::draw_game_over_screen(const std::string& winner) {
     }
 }
 
-void Game::update_display_text() {
-    auto now = std::chrono::steady_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::seconds>(now - text_change_time_).count();
+// Removed update_display_text() - now using TextManager with Publisher events
+
+// Helper functions for dual cursor system
+void Game::handle_player_select(std::pair<int, int>& cursor_pos, PiecePtr& selected_piece, std::pair<int, int>& selected_pos) {
+    // Update position map before accessing it
+    update_cell2piece_map();
     
-    std::cout << "[DEBUG] update_display_text: state=" << (int)current_state_ << ", elapsed=" << elapsed << ", display_text_='" << display_text_ << "'" << std::endl;
-    
-    if (current_state_ == GameState::STARTING) {
-        if (elapsed >= 3) {
-            // After 3 seconds, clear the "GAME START" text and move to PLAYING
-            display_text_ = "";
-            current_state_ = GameState::PLAYING;
-            std::cout << "[DEBUG] Switched to PLAYING state" << std::endl;
+    if (selected_piece == nullptr) {
+        // First press - pick up piece under cursor
+        auto cell_pieces_it = pos.find(cursor_pos);
+        if (cell_pieces_it != pos.end() && !cell_pieces_it->second.empty()) {
+            auto piece = cell_pieces_it->second[0];
+            // Check if player can select this piece
+            if (can_select_piece(piece, current_player_)) {
+                selected_piece = piece;
+                selected_pos = cursor_pos;
+            }
         }
-    } else if (!winner_text_.empty()) {
-        // Game is over but we're still in PLAYING state to keep board visible
-        if (show_winner_first_ && elapsed >= 3) {
-            // After showing "GAME ENDED" for 3 seconds, show winner
-            display_text_ = winner_text_ + " WINS!";
-            show_winner_first_ = false;
-            text_change_time_ = now; // Reset timer for next phase
-            std::cout << "[DEBUG] Switched to winner display: " << display_text_ << std::endl;
+    } else if (cursor_pos == selected_pos) {
+        // Same position - deselect
+        selected_piece = nullptr;
+        selected_pos = {-1, -1};
+    } else {
+        // Different position - validate and create move command
+        if (is_move_valid(selected_piece, selected_pos, cursor_pos)) {
+            try {
+                Command move_cmd(game_time_ms(), selected_piece->id, "move", {selected_pos, cursor_pos});
+                
+                // Process the move command through state machine
+                auto piece_it = piece_by_id.find(move_cmd.piece_id);
+                if (piece_it != piece_by_id.end()) {
+                    auto piece = piece_it->second;
+                    if (piece && piece->state) {
+                        // Update position map again before passing to piece
+                        update_cell2piece_map();
+                        piece->on_command(move_cmd, pos);
+                        
+                        // Publish move event
+                        std::unordered_map<std::string, std::string> eventData;
+                        eventData["piece_id"] = selected_piece->id;
+                        eventData["from"] = std::to_string(selected_pos.first) + "," + std::to_string(selected_pos.second);
+                        eventData["to"] = std::to_string(cursor_pos.first) + "," + std::to_string(cursor_pos.second);
+                        eventPublisher_.publish(GameEvent("piece_moved", eventData));
+                    }
+                }
+            } catch (const std::exception& e) {
+                // Handle move command errors silently
+            }
         }
+        
+        // Reset selection
+        selected_piece = nullptr;
+        selected_pos = {-1, -1};
+    }
+}
+
+void Game::handle_player_jump(PiecePtr& selected_piece, std::pair<int, int>& selected_pos) {
+    if (selected_piece != nullptr) {
+        // Jump in place - no movement, just state change
+        Command jump_cmd(game_time_ms(), selected_piece->id, "jump", {selected_pos});
+        
+        auto piece_it = piece_by_id.find(jump_cmd.piece_id);
+        if (piece_it != piece_by_id.end()) {
+            auto piece = piece_it->second;
+            if (piece && piece->state) {
+                update_cell2piece_map();
+                piece->on_command(jump_cmd, pos);
+            }
+        }
+        
+        // Reset selection
+        selected_piece = nullptr;
+        selected_pos = {-1, -1};
     }
 }
 

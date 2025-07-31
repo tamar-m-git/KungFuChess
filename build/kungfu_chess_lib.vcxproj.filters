@@ -22,6 +22,9 @@
     <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Moves.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\TextManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\img\OpenCvImg.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -70,6 +73,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\State.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\TextManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\img\Img.hpp">

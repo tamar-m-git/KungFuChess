@@ -1,10 +1,10 @@
 #pragma once
 #include "EventSystem.hpp"
+#include <SFML/Audio.hpp>
 #include <iostream>
 #include <string>
-#include <SFML/Audio.hpp>
 
-// Audio manager using SFML
+// Audio manager with SFML support
 class AudioManager : public ISubscriber {
 public:
     AudioManager();
@@ -15,14 +15,10 @@ private:
     void playCaptureSound();
     void playGameStartSound();
     void playGameEndSound();
+    void playChangeSound();
     
     // SFML sound objects
-    sf::SoundBuffer moveBuffer_;
-    sf::SoundBuffer captureBuffer_;
-    sf::SoundBuffer gameStartBuffer_;
-    sf::SoundBuffer gameOverBuffer_;
-    sf::Sound sound_;
-    
-    // Helper to play sound
-    void playSound(const sf::SoundBuffer& buffer, const std::string& description);
+    sf::SoundBuffer moveBuffer, captureBuffer, startBuffer, gameOverBuffer, changeBuffer;
+    sf::Sound moveSound, captureSound, startSound, gameOverSound, changeSound;
+
 };
