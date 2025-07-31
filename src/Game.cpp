@@ -279,9 +279,8 @@ void Game::run_game_loop(int num_iterations, bool is_with_graphics) {
                 
                 // Show promotion message if in promotion mode
                 if (is_promoting_) {
-                    // Draw promotion text on screen
-                    std::string promotion_text = "PROMOTION: Press Q/R/B/N";
-                    // Note: OpenCV text drawing would go here in a real implementation
+                    // Promotion message will be shown on background later
+                    std::cout << "[PROMOTION MODE] Waiting for Q/R/B/N key..." << std::endl;
                 }
                 
               // Load background image
@@ -312,6 +311,17 @@ if (background_img) {
     std::cout << "[DEBUG] current_state_ = " << (int)current_state_ << " (0=STARTING, 1=PLAYING, 2=GAME_OVER)" << std::endl;
     std::cout << "[DEBUG] winner_text_ = '" << winner_text_ << "'" << std::endl;
     std::cout << "[DEBUG] winner_text_.empty() = " << (winner_text_.empty() ? "true" : "false") << std::endl;
+    
+    // Draw score and moves
+    draw_score_and_moves(background_img);
+    
+    // Show promotion message if in promotion mode
+    if (is_promoting_) {
+        int promo_x = offset_x + 50;
+        int promo_y = offset_y + 300;
+        background_img->put_text("PAWN PROMOTION!", promo_x, promo_y, 2.0);
+        background_img->put_text("Q=Queen R=Rook B=Bishop N=Knight", promo_x, promo_y + 40, 1.2);
+    }
     
     // Draw dynamic text from TextManager - positioned above board
     int text_x = offset_x + 30;   // Move slightly more to the left (440 + 30 = 470)
@@ -459,6 +469,7 @@ void Game::process_input(const Command& cmd) {
                             eventData["from"] = std::to_string(selected_piece_pos_.first) + "," + std::to_string(selected_piece_pos_.second);
                             eventData["to"] = std::to_string(cursor_pos_.first) + "," + std::to_string(cursor_pos_.second);
                             eventPublisher_.publish(GameEvent("piece_moved", eventData));
+                            add_move_to_history(selected_piece_->id, selected_piece_pos_, cursor_pos_);
                         }
                     }
                 } catch (const std::exception& e) {}
@@ -542,6 +553,7 @@ void Game::process_input(const Command& cmd) {
                             eventData["from"] = std::to_string(selected_piece_pos_.first) + "," + std::to_string(selected_piece_pos_.second);
                             eventData["to"] = std::to_string(cursor_pos_.first) + "," + std::to_string(cursor_pos_.second);
                             eventPublisher_.publish(GameEvent("piece_moved", eventData));
+                            add_move_to_history(selected_piece_->id, selected_piece_pos_, cursor_pos_);
                         }
                     }
                 } catch (const std::exception& e) {}
@@ -608,6 +620,7 @@ void Game::process_input(const Command& cmd) {
                             eventData["from"] = std::to_string(selected_piece_pos_.first) + "," + std::to_string(selected_piece_pos_.second);
                             eventData["to"] = std::to_string(cursor_pos_.first) + "," + std::to_string(cursor_pos_.second);
                             eventPublisher_.publish(GameEvent("piece_moved", eventData));
+                            add_move_to_history(selected_piece_->id, selected_piece_pos_, cursor_pos_);
                         }
                     }
                 } catch (const std::exception& e) {
@@ -910,6 +923,11 @@ void Game::capture_piece(PiecePtr captured, PiecePtr captor) {
               << " captured by " << (captor ? captor->id : "NULL") << std::endl;
     
     if (captured && captor) {
+        // Update score
+        if (captured->id.length() >= 2) {
+            update_score(captured->id[1], captured->id[0]);
+        }
+        
         // Remove the captured piece first
         pieces.erase(std::remove(pieces.begin(), pieces.end(), captured), pieces.end());
         piece_by_id.erase(captured->id);
@@ -1083,7 +1101,14 @@ void Game::handle_pawn_promotion(PiecePtr pawn) {
     eventData["pawn_id"] = pawn->id;
     eventPublisher_.publish(GameEvent("pawn_promotion", eventData));
     
-    std::cout << "Pawn promotion! Press Q/R/B/N to choose piece type" << std::endl;
+    std::cout << "\n" << std::string(50, '=') << std::endl;
+    std::cout << "🎉 PAWN PROMOTION! 🎉" << std::endl;
+    std::cout << "Choose your new piece:" << std::endl;
+    std::cout << "  Q - Queen (מלכה)" << std::endl;
+    std::cout << "  R - Rook (צריח)" << std::endl;
+    std::cout << "  B - Bishop (רץ)" << std::endl;
+    std::cout << "  N - Knight (סוס)" << std::endl;
+    std::cout << std::string(50, '=') << std::endl;
 }
 
 
@@ -1189,6 +1214,9 @@ void Game::handle_player_select(std::pair<int, int>& cursor_pos, PiecePtr& selec
                         eventData["from"] = std::to_string(selected_pos.first) + "," + std::to_string(selected_pos.second);
                         eventData["to"] = std::to_string(cursor_pos.first) + "," + std::to_string(cursor_pos.second);
                         eventPublisher_.publish(GameEvent("piece_moved", eventData));
+                        
+                        // Add move to history
+                        add_move_to_history(selected_piece->id, selected_pos, cursor_pos);
                     }
                 }
             } catch (const std::exception& e) {
@@ -1247,4 +1275,103 @@ Game create_game(const std::string& pieces_root, ImgFactoryPtr img_factory) {
     auto pieces = piece_factory.create_pieces_from_board_csv(board_csv_path);
     
     return Game(pieces, board);
+}
+
+// Score and move tracking functions
+void Game::update_score(char captured_color, char piece_type) {
+    int value = get_piece_value(piece_type);
+    if (captured_color == 'W') {
+        black_score_.captured_pieces++;
+        black_score_.total_value += value;
+    } else {
+        white_score_.captured_pieces++;
+        white_score_.total_value += value;
+    }
+}
+
+int Game::get_piece_value(char piece_type) {
+    switch (piece_type) {
+        case 'P': return 1;  // Pawn
+        case 'N': return 3;  // Knight
+        case 'B': return 3;  // Bishop
+        case 'R': return 5;  // Rook
+        case 'Q': return 9;  // Queen
+        case 'K': return 0;  // King (game ends)
+        default: return 0;
+    }
+}
+
+void Game::add_move_to_history(const std::string& piece_id, const std::pair<int,int>& from, const std::pair<int,int>& to, const std::string& captured) {
+    MoveRecord move;
+    move.piece_id = piece_id;
+    move.from_pos = std::to_string(from.first) + "," + std::to_string(from.second);
+    move.to_pos = std::to_string(to.first) + "," + std::to_string(to.second);
+    move.captured_piece = captured;
+    move.timestamp = game_time_ms();
+    
+    // Add to appropriate player's history based on piece color
+    if (piece_id.length() >= 2) {
+        if (piece_id[1] == 'W') {
+            white_move_history_.push_back(move);
+            // Keep only last 15 moves for white player
+            if (white_move_history_.size() > 15) {
+                white_move_history_.erase(white_move_history_.begin());
+            }
+        } else if (piece_id[1] == 'B') {
+            black_move_history_.push_back(move);
+            // Keep only last 15 moves for black player
+            if (black_move_history_.size() > 15) {
+                black_move_history_.erase(black_move_history_.begin());
+            }
+        }
+    }
+}
+
+void Game::draw_score_and_moves(ImgPtr background_img) {
+    if (!background_img) return;
+    
+    // Board position
+    int board_size = 640;
+    int board_x = (1920 - board_size) / 2 - 200;
+    int board_y = (1080 - board_size) / 2 - 100;
+    
+    // White player info (left side)
+    int white_x = 50;
+    int white_y = board_y;
+    
+    // White score
+    background_img->put_text("WHITE SCORE", white_x, white_y, 1.5);
+    background_img->put_text("Captured: " + std::to_string(white_score_.captured_pieces), white_x, white_y + 40, 1.0);
+    background_img->put_text("Value: " + std::to_string(white_score_.total_value), white_x, white_y + 70, 1.0);
+    
+    // White moves
+    background_img->put_text("WHITE MOVES", white_x, white_y + 120, 1.5);
+    int move_y = white_y + 160;
+    for (const auto& move : white_move_history_) {
+        int time_sec = move.timestamp / 1000;
+        std::string move_text = std::to_string(time_sec) + "s " + move.piece_id.substr(0,2) + ": " + move.from_pos + "-" + move.to_pos;
+        background_img->put_text(move_text, white_x, move_y, 0.8);
+        move_y += 25;
+        if (move_y > white_y + 400) break; // Limit display area
+    }
+    
+    // Black player info (right side)
+    int black_x = board_x + board_size + 50;
+    int black_y = board_y;
+    
+    // Black score
+    background_img->put_text("BLACK SCORE", black_x, black_y, 1.5);
+    background_img->put_text("Captured: " + std::to_string(black_score_.captured_pieces), black_x, black_y + 40, 1.0);
+    background_img->put_text("Value: " + std::to_string(black_score_.total_value), black_x, black_y + 70, 1.0);
+    
+    // Black moves
+    background_img->put_text("BLACK MOVES", black_x, black_y + 120, 1.5);
+    move_y = black_y + 160;
+    for (const auto& move : black_move_history_) {
+        int time_sec = move.timestamp / 1000;
+        std::string move_text = std::to_string(time_sec) + "s " + move.piece_id.substr(0,2) + ": " + move.from_pos + "-" + move.to_pos;
+        background_img->put_text(move_text, black_x, move_y, 0.8);
+        move_y += 25;
+        if (move_y > black_y + 400) break; // Limit display area
+    }
 }
