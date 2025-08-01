@@ -1,21 +1,29 @@
 #pragma once
+
 #include "EventSystem.hpp"
+#include <unordered_map>
 #include <string>
 
-// Score manager for tracking captured pieces points
+struct PlayerScore {
+    int captured_pieces = 0;
+    int total_value = 0;
+};
+
 class ScoreManager : public ISubscriber {
 public:
     ScoreManager();
+    
+    // ISubscriber interface
     void onEvent(const GameEvent& event) override;
     
-    // Get score text for display
-    std::string getWhiteScoreText() const;
-    std::string getBlackScoreText() const;
+    // Getters
+    const PlayerScore& getWhiteScore() const { return white_score_; }
+    const PlayerScore& getBlackScore() const { return black_score_; }
     
 private:
-    int white_score_ = 0;
-    int black_score_ = 0;
+    PlayerScore white_score_;
+    PlayerScore black_score_;
     
-    int getPieceValue(char piece_type) const;
-    void updateScore(const std::string& captured_piece, const std::string& captor_piece);
+    int get_piece_value(char piece_type);
+    void update_score(char captured_color, char piece_type);
 };

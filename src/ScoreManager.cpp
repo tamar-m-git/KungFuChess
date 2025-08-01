@@ -2,53 +2,39 @@
 #include <iostream>
 
 ScoreManager::ScoreManager() {
-    std::cout << "🏆 ScoreManager initialized" << std::endl;
+    // Initialize scores to zero
 }
 
 void ScoreManager::onEvent(const GameEvent& event) {
     if (event.type == "piece_captured") {
-        auto captured_it = event.data.find("captured");
-        auto captor_it = event.data.find("captor");
-        
-        if (captured_it != event.data.end() && captor_it != event.data.end()) {
-            updateScore(captured_it->second, captor_it->second);
+        auto it_captured = event.data.find("captured");
+        if (it_captured != event.data.end() && it_captured->second.length() >= 2) {
+            char captured_color = it_captured->second[1]; // W or B
+            char piece_type = it_captured->second[0];     // P, R, N, etc.
+            update_score(captured_color, piece_type);
         }
     }
 }
 
-int ScoreManager::getPieceValue(char piece_type) const {
+int ScoreManager::get_piece_value(char piece_type) {
     switch (piece_type) {
         case 'P': return 1;  // Pawn
         case 'N': return 3;  // Knight
         case 'B': return 3;  // Bishop
         case 'R': return 5;  // Rook
         case 'Q': return 9;  // Queen
-        case 'K': return 0;  // King (shouldn't be captured)
+        case 'K': return 0;  // King (game ends)
         default: return 0;
     }
 }
 
-void ScoreManager::updateScore(const std::string& captured_piece, const std::string& captor_piece) {
-    if (captured_piece.length() >= 2 && captor_piece.length() >= 2) {
-        char captured_type = captured_piece[0];
-        char captor_color = captor_piece[1];
-        
-        int points = getPieceValue(captured_type);
-        
-        if (captor_color == 'W') {
-            white_score_ += points;
-            std::cout << "🏆 White scored " << points << " points! Total: " << white_score_ << std::endl;
-        } else if (captor_color == 'B') {
-            black_score_ += points;
-            std::cout << "🏆 Black scored " << points << " points! Total: " << black_score_ << std::endl;
-        }
+void ScoreManager::update_score(char captured_color, char piece_type) {
+    int value = get_piece_value(piece_type);
+    if (captured_color == 'W') {
+        black_score_.captured_pieces++;
+        black_score_.total_value += value;
+    } else {
+        white_score_.captured_pieces++;
+        white_score_.total_value += value;
     }
-}
-
-std::string ScoreManager::getWhiteScoreText() const {
-    return "WHITE SCORE: " + std::to_string(white_score_);
-}
-
-std::string ScoreManager::getBlackScoreText() const {
-    return "BLACK SCORE: " + std::to_string(black_score_);
 }

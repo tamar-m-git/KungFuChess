@@ -30,20 +30,8 @@
 #include "EventSystem.hpp"
 #include "AudioManager.hpp"
 #include "TextManager.hpp"
-
-// Score and move tracking
-struct PlayerScore {
-    int captured_pieces = 0;
-    int total_value = 0;
-};
-
-struct MoveRecord {
-    std::string piece_id;
-    std::string from_pos;
-    std::string to_pos;
-    std::string captured_piece = "";
-    int timestamp;
-};
+#include "ScoreManager.hpp"
+#include "MoveHistoryManager.hpp"
 
 #if __has_include(<filesystem>)
 #include <filesystem>
@@ -141,15 +129,10 @@ private:
     std::shared_ptr<AudioManager> audioManager_;
     std::shared_ptr<TextManager> textManager_;
     
-    // Score and move tracking
-    PlayerScore white_score_;
-    PlayerScore black_score_;
-    std::vector<MoveRecord> white_move_history_;  // 15 moves for white player
-    std::vector<MoveRecord> black_move_history_;  // 15 moves for black player
+    // Managers using Publisher-Subscriber pattern
+    std::shared_ptr<ScoreManager> scoreManager_;
+    std::shared_ptr<MoveHistoryManager> moveHistoryManager_;
     
-    void update_score(char captured_color, char piece_type);
-    int get_piece_value(char piece_type);
-    void add_move_to_history(const std::string& piece_id, const std::pair<int,int>& from, const std::pair<int,int>& to, const std::string& captured = "");
     void draw_score_and_moves(ImgPtr background_img);
 
     std::chrono::steady_clock::time_point start_tp;

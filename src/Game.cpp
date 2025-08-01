@@ -12,6 +12,8 @@ Game::Game(std::vector<PiecePtr> pcs, Board board)
     // Initialize event system
     audioManager_ = std::make_shared<AudioManager>();
     textManager_ = std::make_shared<TextManager>();
+    scoreManager_ = std::make_shared<ScoreManager>();
+    moveHistoryManager_ = std::make_shared<MoveHistoryManager>();
     
     // Subscribe AudioManager to events
     eventPublisher_.subscribe("piece_moved", audioManager_);
@@ -24,6 +26,9 @@ Game::Game(std::vector<PiecePtr> pcs, Board board)
     eventPublisher_.subscribe("game_started", textManager_);
     eventPublisher_.subscribe("game_playing", textManager_);
     eventPublisher_.subscribe("game_ended", textManager_);
+    // Subscribe ScoreManager and MoveHistoryManager
+    eventPublisher_.subscribe("piece_captured", scoreManager_);
+    eventPublisher_.subscribe("piece_moved", moveHistoryManager_);
     
     for(const auto & p : pieces) {
         if (p) {
@@ -468,8 +473,8 @@ void Game::process_input(const Command& cmd) {
                             eventData["piece_id"] = selected_piece_->id;
                             eventData["from"] = std::to_string(selected_piece_pos_.first) + "," + std::to_string(selected_piece_pos_.second);
                             eventData["to"] = std::to_string(cursor_pos_.first) + "," + std::to_string(cursor_pos_.second);
+                            eventData["timestamp"] = std::to_string(game_time_ms());
                             eventPublisher_.publish(GameEvent("piece_moved", eventData));
-                            add_move_to_history(selected_piece_->id, selected_piece_pos_, cursor_pos_);
                         }
                     }
                 } catch (const std::exception& e) {}
@@ -552,8 +557,8 @@ void Game::process_input(const Command& cmd) {
                             eventData["piece_id"] = selected_piece_->id;
                             eventData["from"] = std::to_string(selected_piece_pos_.first) + "," + std::to_string(selected_piece_pos_.second);
                             eventData["to"] = std::to_string(cursor_pos_.first) + "," + std::to_string(cursor_pos_.second);
+                            eventData["timestamp"] = std::to_string(game_time_ms());
                             eventPublisher_.publish(GameEvent("piece_moved", eventData));
-                            add_move_to_history(selected_piece_->id, selected_piece_pos_, cursor_pos_);
                         }
                     }
                 } catch (const std::exception& e) {}
@@ -619,8 +624,8 @@ void Game::process_input(const Command& cmd) {
                             eventData["piece_id"] = selected_piece_->id;
                             eventData["from"] = std::to_string(selected_piece_pos_.first) + "," + std::to_string(selected_piece_pos_.second);
                             eventData["to"] = std::to_string(cursor_pos_.first) + "," + std::to_string(cursor_pos_.second);
+                            eventData["timestamp"] = std::to_string(game_time_ms());
                             eventPublisher_.publish(GameEvent("piece_moved", eventData));
-                            add_move_to_history(selected_piece_->id, selected_piece_pos_, cursor_pos_);
                         }
                     }
                 } catch (const std::exception& e) {
@@ -923,11 +928,6 @@ void Game::capture_piece(PiecePtr captured, PiecePtr captor) {
               << " captured by " << (captor ? captor->id : "NULL") << std::endl;
     
     if (captured && captor) {
-        // Update score
-        if (captured->id.length() >= 2) {
-            update_score(captured->id[1], captured->id[0]);
-        }
-        
         // Remove the captured piece first
         pieces.erase(std::remove(pieces.begin(), pieces.end(), captured), pieces.end());
         piece_by_id.erase(captured->id);
@@ -1213,10 +1213,10 @@ void Game::handle_player_select(std::pair<int, int>& cursor_pos, PiecePtr& selec
                         eventData["piece_id"] = selected_piece->id;
                         eventData["from"] = std::to_string(selected_pos.first) + "," + std::to_string(selected_pos.second);
                         eventData["to"] = std::to_string(cursor_pos.first) + "," + std::to_string(cursor_pos.second);
+                        eventData["timestamp"] = std::to_string(game_time_ms());
                         eventPublisher_.publish(GameEvent("piece_moved", eventData));
                         
-                        // Add move to history
-                        add_move_to_history(selected_piece->id, selected_pos, cursor_pos);
+
                     }
                 }
             } catch (const std::exception& e) {
@@ -1277,55 +1277,7 @@ Game create_game(const std::string& pieces_root, ImgFactoryPtr img_factory) {
     return Game(pieces, board);
 }
 
-// Score and move tracking functions
-void Game::update_score(char captured_color, char piece_type) {
-    int value = get_piece_value(piece_type);
-    if (captured_color == 'W') {
-        black_score_.captured_pieces++;
-        black_score_.total_value += value;
-    } else {
-        white_score_.captured_pieces++;
-        white_score_.total_value += value;
-    }
-}
-
-int Game::get_piece_value(char piece_type) {
-    switch (piece_type) {
-        case 'P': return 1;  // Pawn
-        case 'N': return 3;  // Knight
-        case 'B': return 3;  // Bishop
-        case 'R': return 5;  // Rook
-        case 'Q': return 9;  // Queen
-        case 'K': return 0;  // King (game ends)
-        default: return 0;
-    }
-}
-
-void Game::add_move_to_history(const std::string& piece_id, const std::pair<int,int>& from, const std::pair<int,int>& to, const std::string& captured) {
-    MoveRecord move;
-    move.piece_id = piece_id;
-    move.from_pos = std::to_string(from.first) + "," + std::to_string(from.second);
-    move.to_pos = std::to_string(to.first) + "," + std::to_string(to.second);
-    move.captured_piece = captured;
-    move.timestamp = game_time_ms();
-    
-    // Add to appropriate player's history based on piece color
-    if (piece_id.length() >= 2) {
-        if (piece_id[1] == 'W') {
-            white_move_history_.push_back(move);
-            // Keep only last 15 moves for white player
-            if (white_move_history_.size() > 15) {
-                white_move_history_.erase(white_move_history_.begin());
-            }
-        } else if (piece_id[1] == 'B') {
-            black_move_history_.push_back(move);
-            // Keep only last 15 moves for black player
-            if (black_move_history_.size() > 15) {
-                black_move_history_.erase(black_move_history_.begin());
-            }
-        }
-    }
-}
+// Removed direct score and move tracking - now using Publisher-Subscriber pattern
 
 void Game::draw_score_and_moves(ImgPtr background_img) {
     if (!background_img) return;
@@ -1339,15 +1291,19 @@ void Game::draw_score_and_moves(ImgPtr background_img) {
     int white_x = 50;
     int white_y = board_y;
     
+    // Get data from managers via Publisher-Subscriber pattern
+    const auto& white_score = scoreManager_->getWhiteScore();
+    const auto& white_moves = moveHistoryManager_->getWhiteMoves();
+    
     // White score
     background_img->put_text("WHITE SCORE", white_x, white_y, 1.5);
-    background_img->put_text("Captured: " + std::to_string(white_score_.captured_pieces), white_x, white_y + 40, 1.0);
-    background_img->put_text("Value: " + std::to_string(white_score_.total_value), white_x, white_y + 70, 1.0);
+    background_img->put_text("Captured: " + std::to_string(white_score.captured_pieces), white_x, white_y + 40, 1.0);
+    background_img->put_text("Value: " + std::to_string(white_score.total_value), white_x, white_y + 70, 1.0);
     
     // White moves
     background_img->put_text("WHITE MOVES", white_x, white_y + 120, 1.5);
     int move_y = white_y + 160;
-    for (const auto& move : white_move_history_) {
+    for (const auto& move : white_moves) {
         int time_sec = move.timestamp / 1000;
         std::string move_text = std::to_string(time_sec) + "s " + move.piece_id.substr(0,2) + ": " + move.from_pos + "-" + move.to_pos;
         background_img->put_text(move_text, white_x, move_y, 0.8);
@@ -1359,15 +1315,19 @@ void Game::draw_score_and_moves(ImgPtr background_img) {
     int black_x = board_x + board_size + 50;
     int black_y = board_y;
     
+    // Get data from managers
+    const auto& black_score = scoreManager_->getBlackScore();
+    const auto& black_moves = moveHistoryManager_->getBlackMoves();
+    
     // Black score
     background_img->put_text("BLACK SCORE", black_x, black_y, 1.5);
-    background_img->put_text("Captured: " + std::to_string(black_score_.captured_pieces), black_x, black_y + 40, 1.0);
-    background_img->put_text("Value: " + std::to_string(black_score_.total_value), black_x, black_y + 70, 1.0);
+    background_img->put_text("Captured: " + std::to_string(black_score.captured_pieces), black_x, black_y + 40, 1.0);
+    background_img->put_text("Value: " + std::to_string(black_score.total_value), black_x, black_y + 70, 1.0);
     
     // Black moves
     background_img->put_text("BLACK MOVES", black_x, black_y + 120, 1.5);
     move_y = black_y + 160;
-    for (const auto& move : black_move_history_) {
+    for (const auto& move : black_moves) {
         int time_sec = move.timestamp / 1000;
         std::string move_text = std::to_string(time_sec) + "s " + move.piece_id.substr(0,2) + ": " + move.from_pos + "-" + move.to_pos;
         background_img->put_text(move_text, black_x, move_y, 0.8);

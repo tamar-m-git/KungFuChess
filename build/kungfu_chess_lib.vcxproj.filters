@@ -19,7 +19,13 @@
     <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Graphics.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\MoveHistoryManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Moves.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\ScoreManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\TextManager.cpp">
@@ -57,6 +63,9 @@
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\GraphicsFactory.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\MoveHistoryManager.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Moves.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -70,6 +79,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\PieceFactory.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\ScoreManager.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\State.hpp">

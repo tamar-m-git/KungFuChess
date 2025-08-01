@@ -286,7 +286,9 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\EventSystem.cpp" />
     <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Game.cpp" />
     <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Graphics.cpp" />
+    <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\MoveHistoryManager.cpp" />
     <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Moves.cpp" />
+    <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\ScoreManager.cpp" />
     <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\TextManager.cpp" />
     <ClCompile Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\img\OpenCvImg.cpp" />
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\AudioManager.hpp" />
@@ -298,11 +300,13 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Game.hpp" />
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Graphics.hpp" />
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\GraphicsFactory.hpp" />
+    <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\MoveHistoryManager.hpp" />
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Moves.hpp" />
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Physics.hpp" />
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\PhysicsFactory.hpp" />
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\Piece.hpp" />
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\PieceFactory.hpp" />
+    <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\ScoreManager.hpp" />
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\State.hpp" />
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\TextManager.hpp" />
     <ClInclude Include="C:\training\kamatech\KungFuChess-New\KungFuChess\src\img\Img.hpp" />
